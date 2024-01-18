@@ -20,7 +20,7 @@ package com.velocitypowered.proxy.connection.util;
 import com.velocitypowered.api.proxy.ConnectionRequestBuilder;
 import com.velocitypowered.api.proxy.ConnectionRequestBuilder.Status;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
-import com.velocitypowered.proxy.protocol.packet.Disconnect;
+import com.velocitypowered.proxy.protocol.packet.DisconnectPacket;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import net.kyori.adventure.text.Component;
@@ -62,12 +62,12 @@ public class ConnectionRequestResults {
     return new Impl(Status.SERVER_DISCONNECTED, component, server, true);
   }
 
-  public static Impl forDisconnect(Disconnect disconnect, RegisteredServer server) {
-    return forDisconnect(disconnect.getReason().getComponent(), server);
+  public static Impl forDisconnect(DisconnectPacket disconnectPacket, RegisteredServer server) {
+    return forDisconnect(disconnectPacket.getReason().getComponent(), server);
   }
 
-  public static Impl forUnsafeDisconnect(Disconnect disconnect, RegisteredServer server) {
-    return new Impl(Status.SERVER_DISCONNECTED, disconnect.getReason().getComponent(), server,
+  public static Impl forUnsafeDisconnect(DisconnectPacket disconnectPacket, RegisteredServer server) {
+    return new Impl(Status.SERVER_DISCONNECTED, disconnectPacket.getReason().getComponent(), server,
         false);
   }
 

@@ -126,10 +126,10 @@ bungee-plugin-message-channel = true
 show-ping-requests = false
 
 # By default, Velocity will attempt to gracefully handle situations where the user unexpectedly
-# loses connection to the server without an explicit disconnect message by attempting to fall the
-# user back, except in the case of read timeouts. BungeeCord will disconnect the user instead. You
+# loses connection to the server without an explicit disconnectPacket message by attempting to fall the
+# user back, except in the case of read timeouts. BungeeCord will disconnectPacket the user instead. You
 # can disable this setting to use the BungeeCord behavior.
-failover-on-unexpected-server-disconnect = true
+failover-on-unexpected-server-disconnectPacket = true
 
 # Declares the proxy commands to 1.13+ clients.
 announce-proxy-commands = true

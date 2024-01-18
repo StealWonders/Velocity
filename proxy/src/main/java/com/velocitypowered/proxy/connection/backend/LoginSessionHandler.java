@@ -33,13 +33,13 @@ import com.velocitypowered.proxy.connection.util.ConnectionRequestResults;
 import com.velocitypowered.proxy.connection.util.ConnectionRequestResults.Impl;
 import com.velocitypowered.proxy.protocol.ProtocolUtils;
 import com.velocitypowered.proxy.protocol.StateRegistry;
-import com.velocitypowered.proxy.protocol.packet.Disconnect;
-import com.velocitypowered.proxy.protocol.packet.EncryptionRequest;
-import com.velocitypowered.proxy.protocol.packet.LoginAcknowledged;
-import com.velocitypowered.proxy.protocol.packet.LoginPluginMessage;
-import com.velocitypowered.proxy.protocol.packet.LoginPluginResponse;
-import com.velocitypowered.proxy.protocol.packet.ServerLoginSuccess;
-import com.velocitypowered.proxy.protocol.packet.SetCompression;
+import com.velocitypowered.proxy.protocol.packet.DisconnectPacket;
+import com.velocitypowered.proxy.protocol.packet.EncryptionRequestPacket;
+import com.velocitypowered.proxy.protocol.packet.LoginAcknowledgedPacket;
+import com.velocitypowered.proxy.protocol.packet.LoginPluginMessagePacket;
+import com.velocitypowered.proxy.protocol.packet.LoginPluginResponsePacket;
+import com.velocitypowered.proxy.protocol.packet.ServerLoginSuccessPacket;
+import com.velocitypowered.proxy.protocol.packet.SetCompressionPacket;
 import com.velocitypowered.proxy.util.except.QuietRuntimeException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -77,12 +77,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
   }
 
   @Override
-  public boolean handle(EncryptionRequest packet) {
+  public boolean handle(EncryptionRequestPacket packet) {
     throw new IllegalStateException("Backend server is online-mode!");
   }
 
   @Override
-  public boolean handle(LoginPluginMessage packet) {
+  public boolean handle(LoginPluginMessagePacket packet) {
     MinecraftConnection mc = serverConn.ensureConnected();
     VelocityConfiguration configuration = server.getConfiguration();
     if (configuration.getPlayerInfoForwardingMode() == PlayerInfoForwarding.MODERN
@@ -97,13 +97,13 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
           serverConn.getPlayerRemoteAddressAsString(), serverConn.getPlayer(),
           requestedForwardingVersion);
 
-      LoginPluginResponse response = new LoginPluginResponse(packet.getId(), true, forwardingData);
+      LoginPluginResponsePacket response = new LoginPluginResponsePacket(packet.getId(), true, forwardingData);
       mc.write(response);
       informationForwarded = true;
     } else {
       // Don't understand, fire event if we have subscribers
       if (!this.server.getEventManager().hasSubscribers(ServerLoginPluginMessageEvent.class)) {
-        mc.write(new LoginPluginResponse(packet.getId(), false, Unpooled.EMPTY_BUFFER));
+        mc.write(new LoginPluginResponsePacket(packet.getId(), false, Unpooled.EMPTY_BUFFER));
         return true;
       }
 
@@ -114,10 +114,10 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
               contents, packet.getId()))
           .thenAcceptAsync(event -> {
             if (event.getResult().isAllowed()) {
-              mc.write(new LoginPluginResponse(packet.getId(), true, Unpooled
+              mc.write(new LoginPluginResponsePacket(packet.getId(), true, Unpooled
                   .wrappedBuffer(event.getResult().getResponse())));
             } else {
-              mc.write(new LoginPluginResponse(packet.getId(), false, Unpooled.EMPTY_BUFFER));
+              mc.write(new LoginPluginResponsePacket(packet.getId(), false, Unpooled.EMPTY_BUFFER));
             }
           }, mc.eventLoop());
     }
@@ -125,20 +125,20 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
   }
 
   @Override
-  public boolean handle(Disconnect packet) {
+  public boolean handle(DisconnectPacket packet) {
     resultFuture.complete(ConnectionRequestResults.forDisconnect(packet, serverConn.getServer()));
     serverConn.disconnect();
     return true;
   }
 
   @Override
-  public boolean handle(SetCompression packet) {
+  public boolean handle(SetCompressionPacket packet) {
     serverConn.ensureConnected().setCompressionThreshold(packet.getThreshold());
     return true;
   }
 
   @Override
-  public boolean handle(ServerLoginSuccess packet) {
+  public boolean handle(ServerLoginSuccessPacket packet) {
     if (server.getConfiguration().getPlayerInfoForwardingMode() == PlayerInfoForwarding.MODERN
         && !informationForwarded) {
       resultFuture.complete(ConnectionRequestResults.forDisconnect(MODERN_IP_FORWARDING_FAILURE,
@@ -148,7 +148,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
     }
 
     // The player has been logged on to the backend server, but we're not done yet. There could be
-    // other problems that could arise before we get a JoinGame packet from the server.
+    // other problems that could arise before we get a JoinGamePacket packet from the server.
 
     // Move into the PLAY phase.
     MinecraftConnection smc = serverConn.ensureConnected();
@@ -156,7 +156,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
       smc.setActiveSessionHandler(StateRegistry.PLAY,
           new TransitionSessionHandler(server, serverConn, resultFuture));
     } else {
-      smc.write(new LoginAcknowledged());
+      smc.write(new LoginAcknowledgedPacket());
       smc.setActiveSessionHandler(StateRegistry.CONFIG,
           new ConfigSessionHandler(server, serverConn, resultFuture));
       ConnectedPlayer player = serverConn.getPlayer();

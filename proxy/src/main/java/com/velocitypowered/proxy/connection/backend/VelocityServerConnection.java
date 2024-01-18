@@ -39,9 +39,10 @@ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
 import com.velocitypowered.proxy.connection.forge.modern.ModernForgeConnectionType;
 import com.velocitypowered.proxy.connection.util.ConnectionRequestResults.Impl;
 import com.velocitypowered.proxy.protocol.StateRegistry;
-import com.velocitypowered.proxy.protocol.packet.Handshake;
-import com.velocitypowered.proxy.protocol.packet.PluginMessage;
-import com.velocitypowered.proxy.protocol.packet.ServerLogin;
+import com.velocitypowered.proxy.protocol.packet.HandshakePacket;
+import com.velocitypowered.proxy.protocol.packet.JoinGamePacket;
+import com.velocitypowered.proxy.protocol.packet.PluginMessagePacket;
+import com.velocitypowered.proxy.protocol.packet.ServerLoginPacket;
 import com.velocitypowered.proxy.server.VelocityRegisteredServer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -173,39 +174,39 @@ public class VelocityServerConnection implements MinecraftConnectionAssociation,
     final MinecraftConnection mc = ensureConnected();
     PlayerInfoForwarding forwardingMode = server.getConfiguration().getPlayerInfoForwardingMode();
 
-    // Initiate the handshake.
+    // Initiate the handshakePacket.
     ProtocolVersion protocolVersion = proxyPlayer.getConnection().getProtocolVersion();
     String playerVhost =
         proxyPlayer.getVirtualHost().orElseGet(() -> registeredServer.getServerInfo().getAddress())
             .getHostString();
 
-    Handshake handshake = new Handshake();
-    handshake.setNextStatus(StateRegistry.LOGIN_ID);
-    handshake.setProtocolVersion(protocolVersion);
+    HandshakePacket handshakePacket = new HandshakePacket();
+    handshakePacket.setNextStatus(StateRegistry.LOGIN_ID);
+    handshakePacket.setProtocolVersion(protocolVersion);
     if (forwardingMode == PlayerInfoForwarding.LEGACY) {
-      handshake.setServerAddress(createLegacyForwardingAddress());
+      handshakePacket.setServerAddress(createLegacyForwardingAddress());
     } else if (forwardingMode == PlayerInfoForwarding.BUNGEEGUARD) {
       byte[] secret = server.getConfiguration().getForwardingSecret();
-      handshake.setServerAddress(createBungeeGuardForwardingAddress(secret));
+      handshakePacket.setServerAddress(createBungeeGuardForwardingAddress(secret));
     } else if (proxyPlayer.getConnection().getType() == ConnectionTypes.LEGACY_FORGE) {
-      handshake.setServerAddress(playerVhost + HANDSHAKE_HOSTNAME_TOKEN);
+      handshakePacket.setServerAddress(playerVhost + HANDSHAKE_HOSTNAME_TOKEN);
     } else if (proxyPlayer.getConnection().getType() instanceof ModernForgeConnectionType) {
-      handshake.setServerAddress(playerVhost + ((ModernForgeConnectionType) proxyPlayer
+      handshakePacket.setServerAddress(playerVhost + ((ModernForgeConnectionType) proxyPlayer
               .getConnection().getType()).getModernToken());
     } else {
-      handshake.setServerAddress(playerVhost);
+      handshakePacket.setServerAddress(playerVhost);
     }
 
-    handshake.setPort(registeredServer.getServerInfo().getAddress().getPort());
-    mc.delayedWrite(handshake);
+    handshakePacket.setPort(registeredServer.getServerInfo().getAddress().getPort());
+    mc.delayedWrite(handshakePacket);
 
     mc.setProtocolVersion(protocolVersion);
     mc.setActiveSessionHandler(StateRegistry.LOGIN);
     if (proxyPlayer.getIdentifiedKey() == null
         && proxyPlayer.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_19_3) >= 0) {
-      mc.delayedWrite(new ServerLogin(proxyPlayer.getUsername(), proxyPlayer.getUniqueId()));
+      mc.delayedWrite(new ServerLoginPacket(proxyPlayer.getUsername(), proxyPlayer.getUniqueId()));
     } else {
-      mc.delayedWrite(new ServerLogin(proxyPlayer.getUsername(), proxyPlayer.getIdentifiedKey()));
+      mc.delayedWrite(new ServerLoginPacket(proxyPlayer.getUsername(), proxyPlayer.getIdentifiedKey()));
     }
     mc.flush();
   }
@@ -282,7 +283,7 @@ public class VelocityServerConnection implements MinecraftConnectionAssociation,
 
     MinecraftConnection mc = ensureConnected();
 
-    PluginMessage message = new PluginMessage(identifier.getId(), data);
+    PluginMessagePacket message = new PluginMessagePacket(identifier.getId(), data);
     mc.write(message);
     return true;
   }
@@ -342,7 +343,7 @@ public class VelocityServerConnection implements MinecraftConnectionAssociation,
   }
 
   /**
-   * Gets whether the {@link com.velocitypowered.proxy.protocol.packet.JoinGame} packet has been
+   * Gets whether the {@link JoinGamePacket} packet has been
    * sent by this server.
    *
    * @return Whether the join has been completed.

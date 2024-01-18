@@ -48,6 +48,6 @@ class PluginMessageUtilTest {
     assertEquals("legacy:example", PluginMessageUtil
         .transformLegacyToModernChannel("Example"));
     assertEquals("legacy:pskeepalive", PluginMessageUtil
-        .transformLegacyToModernChannel("PS|KeepAlive"));
+        .transformLegacyToModernChannel("PS|KeepAlivePacket"));
   }
 }
